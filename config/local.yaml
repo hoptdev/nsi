@@ -1,0 +1,10 @@
+env: "dev"
+psql_connect: "postgres://amnesia:admin@localhost:5432/postgres"
+server:
+  port: 7777
+  addr: "127.0.0.1"
+  timeout: 5s
+client:
+  port: 8888
+  addr: "127.0.0.1" 
+  
