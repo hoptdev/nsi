@@ -35,6 +35,8 @@ github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 h1:5ZPtiqj0JL5oKWmcsq4VMaAW5uk
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3/go.mod h1:ndYquD05frm2vACXE1nsccT4oJzjhw2arTS2cpUD1PI=
 github.com/hoptdev/sso_protos v0.0.0-20250408194714-80fb90891b12 h1:yos8uJe3QsfZm6MH6yHQx6SAJueT202jPQ6qi7p3eSc=
 github.com/hoptdev/sso_protos v0.0.0-20250408194714-80fb90891b12/go.mod h1:XnYyuiFOPdnZK8xXfENs50k4yncC21JuzE3MU6mPI/s=
+github.com/hoptdev/sso_protos v0.0.3 h1:6lkzHZQn2KmTot+/q2fbjSOqElSJhiMCuqnOjS4Tcq4=
+github.com/hoptdev/sso_protos v0.0.3/go.mod h1:XnYyuiFOPdnZK8xXfENs50k4yncC21JuzE3MU6mPI/s=
 github.com/ilyakaznacheev/cleanenv v1.5.0 h1:0VNZXggJE2OYdXE87bfSSwGxeiGt9moSR2lOrsHHvr4=
 github.com/ilyakaznacheev/cleanenv v1.5.0/go.mod h1:a5aDzaJrLCQZsazHol1w8InnDcOX0OColm64SlIi6gk=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=

@@ -3,18 +3,16 @@ package grpcHandler
 import (
 	"context"
 	"net/http"
-	grpc_client "nsi/internal/app/grpc"
+	grpcService "nsi/internal/services/grpc"
 	"time"
-
-	ssov1 "github.com/hoptdev/sso_protos/gen/go/sso"
 )
 
 type Handler struct {
-	app *grpc_client.App
+	service *grpcService.Service
 }
 
-func NewHandler(app *grpc_client.App) *Handler {
-	return &Handler{app}
+func NewHandler(service *grpcService.Service) *Handler {
+	return &Handler{service}
 }
 
 func (handler *Handler) ValidateHandler(next http.HandlerFunc) http.HandlerFunc {
@@ -22,11 +20,8 @@ func (handler *Handler) ValidateHandler(next http.HandlerFunc) http.HandlerFunc 
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
 
-		request := &ssov1.ValidateTokenRequest{
-			RefreshToken: r.Header.Get("Authorization"),
-		}
+		resp, err := handler.service.ValidateToken(ctx, r.Header.Get("Authorization"))
 
-		resp, err := handler.app.GRPCClient.Validate(ctx, request)
 		if err != nil {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
