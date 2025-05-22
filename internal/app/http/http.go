@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/doganarif/govisual"
+	"github.com/rs/cors"
 )
 
 type App struct {
@@ -35,6 +36,14 @@ func New(log *slog.Logger, port int, timeout time.Duration, grpc *grpcHandler.Ha
 
 func (app *App) Run() {
 	handler := govisual.Wrap(app.mux, govisual.WithRequestBodyLogging(true), govisual.WithResponseBodyLogging(true))
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"}, //not safe
+		AllowCredentials: true,
+
+		Debug: true,
+	})
+	handler = c.Handler(handler)
 
 	server := &http.Server{
 		Addr:    fmt.Sprintf("0.0.0.0:%v", app.port),
