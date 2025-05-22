@@ -39,6 +39,7 @@ func (app *App) Run() {
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"}, //not safe
+		AllowedHeaders:   []string{"*"}, //not safe
 		AllowCredentials: true,
 
 		Debug: true,
