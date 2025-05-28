@@ -4,10 +4,11 @@ import (
 	"log/slog"
 	grpc_client "nsi/internal/app/grpc"
 	httpapp "nsi/internal/app/http"
+	grpcHandler "nsi/internal/auth"
 	"nsi/internal/config"
-	grpcHandler "nsi/internal/grpc"
 	"nsi/internal/services/dashboard"
 	grpcService "nsi/internal/services/grpc"
+	"nsi/internal/services/rights"
 	"nsi/internal/services/widget"
 	psql "nsi/internal/storage"
 )
@@ -28,10 +29,11 @@ func New(log *slog.Logger, cfg *config.Config) *App {
 
 	grpcHandler := grpcHandler.NewHandler(grpcservice)
 
-	dashboardService := dashboard.New(log, storage, storage)
-	widgetService := widget.New(log, storage, storage)
+	dashboardService := dashboard.New(log, storage, storage, storage, storage)
+	widgetService := widget.New(log, storage, storage, storage, storage)
+	rightsService := rights.New(log, storage, storage, storage)
 
-	server := httpapp.New(log, cfg.Server.Port, cfg.Server.Timeout, grpcHandler, grpcservice, dashboardService, widgetService)
+	server := httpapp.New(log, cfg.Server.Port, cfg.Server.Timeout, rightsService, grpcHandler, grpcservice, dashboardService, widgetService)
 
 	return &App{
 		HttpServer: server,

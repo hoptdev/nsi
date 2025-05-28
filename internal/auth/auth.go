@@ -1,9 +1,10 @@
-package grpcHandler
+package authHandler
 
 import (
 	"context"
 	"net/http"
 	grpcService "nsi/internal/services/grpc"
+	"strconv"
 	"time"
 )
 
@@ -30,6 +31,8 @@ func (handler *Handler) ValidateHandler(next http.HandlerFunc) http.HandlerFunc 
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
+
+		r.Header.Add("UserId", strconv.Itoa(int(resp.UserId)))
 
 		next(w, r)
 	}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	models "nsi/internal/domain"
+	join_models "nsi/internal/domain/join"
 )
 
 var (
@@ -14,27 +15,37 @@ var (
 )
 
 type Service struct {
-	log          *slog.Logger
-	userUpdater  DashboardUpdater
-	userProvider DashboardProvider
+	log               *slog.Logger
+	dashboardUpdater  DashboardUpdater
+	dashboardProvider DashboardProvider
+	dashboardCreator  DashboardCreator
+	dashboardRemover  DashboardRemover
 }
 
 type DashboardProvider interface {
+	GetDashboard(ctx context.Context, model *models.Dashboard) error
+	GetDashboardsWithAccess(ctx context.Context, userId int) ([]join_models.DashboardWithRight, error)
+}
+
+type DashboardCreator interface {
 	CreateDashboard(ctx context.Context, model *models.Dashboard) error
-	DeleteDashboard(ctx context.Context, id int) error
 }
 
 type DashboardUpdater interface {
 }
 
-func New(log *slog.Logger, updater DashboardUpdater, provider DashboardProvider) *Service {
-	return &Service{log, updater, provider}
+type DashboardRemover interface {
+	DeleteDashboard(ctx context.Context, id int) error
+}
+
+func New(log *slog.Logger, updater DashboardUpdater, provider DashboardProvider, creator DashboardCreator, remover DashboardRemover) *Service {
+	return &Service{log, updater, provider, creator, remover}
 }
 
 func (service *Service) Create(ctx context.Context, name string, parentId *int) (id int, err error) {
 	model := &models.Dashboard{Id: 0, Name: name, ParentId: parentId}
 
-	err = service.userProvider.CreateDashboard(ctx, model)
+	err = service.dashboardCreator.CreateDashboard(ctx, model)
 	if err != nil {
 		return 0, err
 	}
@@ -42,8 +53,28 @@ func (service *Service) Create(ctx context.Context, name string, parentId *int) 
 	return model.Id, nil
 }
 
+func (service *Service) GetDashboard(ctx context.Context, id int) (*models.Dashboard, error) {
+	model := &models.Dashboard{Id: id}
+
+	err := service.dashboardProvider.GetDashboard(ctx, model)
+	if err != nil {
+		return nil, err
+	}
+
+	return model, nil
+}
+
+func (service *Service) GetDashboardsWithAccess(ctx context.Context, userId int) ([]join_models.DashboardWithRight, error) {
+	result, err := service.dashboardProvider.GetDashboardsWithAccess(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (service *Service) Delete(ctx context.Context, id int) error {
-	return service.userProvider.DeleteDashboard(ctx, id)
+	return service.dashboardRemover.DeleteDashboard(ctx, id)
 }
 
 func (service *Service) Update(ctx context.Context, id int, dashboard models.Dashboard) error {

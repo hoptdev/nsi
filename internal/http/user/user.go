@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	grpcHandler "nsi/internal/grpc"
+	grpcHandler "nsi/internal/auth"
 	"time"
 )
 

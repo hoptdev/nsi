@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	grpcHandler "nsi/internal/grpc"
+	grpcHandler "nsi/internal/auth"
 	dashboardController "nsi/internal/http/dashboard"
 	userController "nsi/internal/http/user"
 	widgetController "nsi/internal/http/widget"
 	"nsi/internal/services/dashboard"
 	grpcService "nsi/internal/services/grpc"
+	"nsi/internal/services/rights"
 	"nsi/internal/services/widget"
 	"time"
 
@@ -25,10 +26,10 @@ type App struct {
 	port   int
 }
 
-func New(log *slog.Logger, port int, timeout time.Duration, grpc *grpcHandler.Handler, gservice *grpcService.Service, ds *dashboard.Service, ws *widget.Service) *App {
+func New(log *slog.Logger, port int, timeout time.Duration, rights *rights.Service, grpc *grpcHandler.Handler, gservice *grpcService.Service, ds *dashboard.Service, ws *widget.Service) *App {
 	mux := http.NewServeMux()
-	dashboardController.Register(log, mux, timeout, grpc, ds)
-	widgetController.Register(log, mux, timeout, grpc, ws)
+	dashboardController.Register(log, mux, timeout, grpc, ds, rights)
+	widgetController.Register(log, mux, timeout, grpc, ws, rights)
 	userController.Register(log, mux, timeout, grpc, gservice)
 
 	return &App{log, mux, nil, port}
