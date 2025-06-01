@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	models "nsi/internal/domain"
 	join_models "nsi/internal/domain/join"
+	dashboardController "nsi/internal/http/dashboard"
 )
 
 var (
@@ -24,7 +25,7 @@ type Service struct {
 
 type DashboardProvider interface {
 	GetDashboard(ctx context.Context, model *models.Dashboard) error
-	GetDashboardsWithAccess(ctx context.Context, userId int) ([]join_models.DashboardWithRight, error)
+	GetDashboardsWithRights(ctx context.Context, userId int) ([]join_models.DashboardWithRight, error)
 }
 
 type DashboardCreator interface {
@@ -42,10 +43,16 @@ func New(log *slog.Logger, updater DashboardUpdater, provider DashboardProvider,
 	return &Service{log, updater, provider, creator, remover}
 }
 
-func (service *Service) Create(ctx context.Context, name string, parentId *int) (id int, err error) {
+func (service *Service) Create(ctx context.Context, name string, parentId *int, ownerId int, rightService dashboardController.RightHandler) (id int, err error) {
 	model := &models.Dashboard{Id: 0, Name: name, ParentId: parentId}
 
+	//todo: transaction
 	err = service.dashboardCreator.CreateDashboard(ctx, model)
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = rightService.Create(ctx, &id, nil, ownerId, models.Admin)
 	if err != nil {
 		return 0, err
 	}
@@ -65,7 +72,7 @@ func (service *Service) GetDashboard(ctx context.Context, id int) (*models.Dashb
 }
 
 func (service *Service) GetDashboardsWithAccess(ctx context.Context, userId int) ([]join_models.DashboardWithRight, error) {
-	result, err := service.dashboardProvider.GetDashboardsWithAccess(ctx, userId)
+	result, err := service.dashboardProvider.GetDashboardsWithRights(ctx, userId)
 	if err != nil {
 		return nil, err
 	}

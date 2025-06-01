@@ -31,7 +31,7 @@ func New(log *slog.Logger, cfg *config.Config) *App {
 
 	dashboardService := dashboard.New(log, storage, storage, storage, storage)
 	widgetService := widget.New(log, storage, storage, storage, storage)
-	rightsService := rights.New(log, storage, storage, storage)
+	rightsService := rights.New(log, storage, storage, storage, storage)
 
 	server := httpapp.New(log, cfg.Server.Port, cfg.Server.Timeout, rightsService, grpcHandler, grpcservice, dashboardService, widgetService)
 

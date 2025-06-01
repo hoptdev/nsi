@@ -55,39 +55,51 @@ func (s *Storage) GetDashboard(ctx context.Context, model *models.Dashboard) err
 	return err
 }
 
-func (s *Storage) GetDashboardsWithAccess(ctx context.Context, userId int) ([]join_models.DashboardWithRight, error) {
+func (s *Storage) GetDashboardsWithRights(ctx context.Context, userId int) ([]join_models.DashboardWithRight, error) {
+	conn, err := s.dbPool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	query := `
+        SELECT d.id, d.name, ar.type 
+        FROM dashboards d
+        JOIN dashboardOnAccessRights dar ON d.id = dar.dashboardId
+        JOIN accessRights ar ON dar.accessRightId = ar.id
+        WHERE ar.userId = $1;
+    `
+	rows, err := conn.Query(ctx, query, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []join_models.DashboardWithRight
+	for rows.Next() {
+		var item join_models.DashboardWithRight
+		if err := rows.Scan(&item.Id, &item.Name, &item.AccessType); err != nil {
+			return nil, err
+		}
+		results = append(results, item)
+	}
+	return results, nil
+}
+
+func (s *Storage) GetDashboardRightByData(ctx context.Context, userId int, dashboardId int) (*models.AccessRight, error) {
 	conn, err := s.dbPool.Acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	defer conn.Release()
+	var result models.AccessRight
 
-	query := "SELECT d.id, d.name, d.parentId, ar.type FROM dashboards d JOIN dashboardOnAccessRights access ON d.id=access.dashboardId JOIN accessRights ar ON ar.userId=$1;"
-
-	count := 0
-	rows, err := conn.Query(ctx, query, userId)
-	if err != nil {
+	query := "SELECT ar.* FROM accessRights ar LEFT JOIN dashboardOnAccessRights d ON ar.id=d.accessRightId WHERE d.dashboardId=$1 AND ar.userId=$2;"
+	row := conn.QueryRow(ctx, query, dashboardId, userId)
+	if err := row.Scan(&result.Id, &result.UserId, &result.UserGroupId, &result.AccessToken, &result.Type); err != nil {
 		return nil, err
 	}
-	for rows.Next() {
-		count++
-	}
-	result := make([]join_models.DashboardWithRight, 0, count)
 
-	rows, err = conn.Query(ctx, query, userId)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var item join_models.DashboardWithRight
-		if err := rows.Scan(&item.Id, &item.Name, &item.ParentId, &item.AccessType); err != nil {
-			return nil, err
-		}
-		result = append(result, item)
-	}
-
-	return result, nil
+	return &result, nil
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	grpcHandler "nsi/internal/auth"
 	dashboardController "nsi/internal/http/dashboard"
+	rightsController "nsi/internal/http/rights"
 	userController "nsi/internal/http/user"
 	widgetController "nsi/internal/http/widget"
 	"nsi/internal/services/dashboard"
@@ -31,6 +32,7 @@ func New(log *slog.Logger, port int, timeout time.Duration, rights *rights.Servi
 	dashboardController.Register(log, mux, timeout, grpc, ds, rights)
 	widgetController.Register(log, mux, timeout, grpc, ws, rights)
 	userController.Register(log, mux, timeout, grpc, gservice)
+	rightsController.Register(log, mux, timeout, grpc, rights, rights)
 
 	return &App{log, mux, nil, port}
 }

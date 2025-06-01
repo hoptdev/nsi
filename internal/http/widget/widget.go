@@ -20,6 +20,7 @@ type widgetHelper struct {
 	rights   RightHandler
 }
 type RightHandler interface {
+	CheckDashboardRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (err error)
 	CheckWidgetRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (err error)
 }
 
@@ -33,18 +34,23 @@ type WidgetHandlers interface {
 func Register(logger *slog.Logger, mux *http.ServeMux, t time.Duration, grpc *grpcHandler.Handler, handlers WidgetHandlers, rights RightHandler) {
 	helper := &widgetHelper{logger, t, handlers, rights}
 
-	mux.HandleFunc("POST /widget/create", grpc.ValidateHandler(helper.Create()))
-	mux.HandleFunc("DELETE /widget/{id}", grpc.ValidateHandler(helper.Delete()))
+	mux.HandleFunc("POST /widget/create", grpc.ValidateHandler(helper.Create(models.Update)))
+	mux.HandleFunc("DELETE /widget/{id}", grpc.ValidateHandler(helper.Delete(models.Admin)))
 	mux.HandleFunc("GET /widgets", grpc.ValidateHandler(helper.GetWidgets(models.ReadOnly)))
 }
 
-func (d *widgetHelper) validateRole(ctx context.Context, w http.ResponseWriter, r *http.Request, role models.GrantType, dashboardId int) error {
+func (d *widgetHelper) validateRoleWidget(ctx context.Context, w http.ResponseWriter, r *http.Request, role models.GrantType, dashboardId int) error {
 	userId, _ := strconv.Atoi(r.Header.Get("UserId"))
 	err := d.rights.CheckWidgetRight(ctx, userId, dashboardId, role)
 	return err
 }
+func (d *widgetHelper) validateRoleDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request, role models.GrantType, dashboardId int) error {
+	userId, _ := strconv.Atoi(r.Header.Get("UserId"))
+	err := d.rights.CheckDashboardRight(ctx, userId, dashboardId, role)
+	return err
+}
 
-func (d *widgetHelper) Delete() http.HandlerFunc {
+func (d *widgetHelper) Delete(role models.GrantType) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		d.log.Info(fmt.Sprintf("[%v] [%v] request", r.Method, r.URL.Path))
 
@@ -54,6 +60,14 @@ func (d *widgetHelper) Delete() http.HandlerFunc {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 32)
 		if err != nil {
 			http.Error(w, "Invalid data", http.StatusBadRequest)
+			return
+		}
+
+		err = d.validateRoleWidget(ctx, w, r, role, int(id))
+		if err != nil {
+			d.log.Error(err.Error())
+
+			http.Error(w, "Permission denied", http.StatusForbidden)
 			return
 		}
 
@@ -83,6 +97,14 @@ func (d *widgetHelper) GetWidgets(role models.GrantType) http.HandlerFunc {
 			return
 		}
 
+		err = d.validateRoleDashboard(ctx, w, r, role, dashboardId)
+		if err != nil {
+			d.log.Error(err.Error())
+
+			http.Error(w, "Permission denied", http.StatusForbidden)
+			return
+		}
+
 		widgets, err := d.handlers.GetByDashboard(ctx, userId, dashboardId)
 		if err != nil {
 			d.log.Error(err.Error())
@@ -104,7 +126,7 @@ func (d *widgetHelper) GetWidgets(role models.GrantType) http.HandlerFunc {
 	}
 }
 
-func (d *widgetHelper) Create() http.HandlerFunc {
+func (d *widgetHelper) Create(role models.GrantType) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		d.log.Info(fmt.Sprintf("[%v] [%v] request", r.Method, r.URL.Path))
 
@@ -122,6 +144,14 @@ func (d *widgetHelper) Create() http.HandlerFunc {
 
 		if err != nil {
 			http.Error(w, "Invalid data", http.StatusBadRequest)
+			return
+		}
+
+		err = d.validateRoleDashboard(ctx, w, r, role, params.DashboardId)
+		if err != nil {
+			d.log.Error(err.Error())
+
+			http.Error(w, "Permission denied", http.StatusForbidden)
 			return
 		}
 

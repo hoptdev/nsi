@@ -7,7 +7,8 @@ CREATE TABLE dashboards (
 CREATE TYPE widgetType AS ENUM ('square');
 
 CREATE TABLE widgets (
-    id SERIAL PRIMARY KEY, name varchar(255),
+    id SERIAL PRIMARY KEY,
+    name varchar(255),
     dashboardId int NOT NULL REFERENCES dashboards ON DELETE CASCADE,
     type widgetType NOT NULL,
     config json NOT NULL

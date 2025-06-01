@@ -3,78 +3,182 @@ package psql
 import (
 	"context"
 	models "nsi/internal/domain"
-	join_models "nsi/internal/domain/join"
 )
 
-func (s *Storage) GetDashboardRightByData(ctx context.Context, userId int, dashboardId int) (*models.AccessRight, error) {
+func (s *Storage) UpdateAccessRight(ctx context.Context, id int, update models.AccessRight) error {
 	conn, err := s.dbPool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
 	defer conn.Release()
-	var result models.AccessRight
 
-	query := "SELECT ar.* FROM accessRights ar LEFT JOIN dashboardOnAccessRights d ON ar.id=d.accessRightId WHERE d.dashboardId=$1 AND ar.userId=$2;"
-	row := conn.QueryRow(ctx, query, dashboardId, userId)
-	if err := row.Scan(&result.Id, &result.UserId, &result.UserGroupId, &result.AccessToken, &result.Type); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
+	query := `
+        UPDATE accessRights 
+        SET userId = $1, userGroupId = $2, accessToken = $3, type = $4 
+        WHERE id = $5;
+    `
+	_, err = conn.Exec(
+		ctx,
+		query,
+		update.UserId,
+		update.UserGroupId,
+		update.AccessToken,
+		update.Type,
+		id,
+	)
+	return err
 }
 
-func (s *Storage) GetWidgetRightByData(ctx context.Context, userId int, dashboardId int) (*models.AccessRight, error) {
+func (s *Storage) DeleteDashboardAccessRight(ctx context.Context, dashboardId int, rightId int) error {
 	conn, err := s.dbPool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
 	defer conn.Release()
-	var result models.AccessRight
 
-	query := "SELECT ar.* FROM accessRights ar JOIN widgetOnAccessRights d ON ar.id=d.accessRightId WHERE d.dashboardId=$1 AND ar.userId=$2;"
-	row := conn.QueryRow(ctx, query, dashboardId, userId)
-	if err := row.Scan(&result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
+	query := `DELETE FROM accessRights
+	USING widgetOnAccessRights a
+	WHERE a.widgetId=$1 AND id=$2;`
+	_, err = conn.Exec(ctx, query, dashboardId, rightId)
+	return err
 }
 
-func (s *Storage) GetWidgetsByDashboard(ctx context.Context, userId int, dashboardId int) (*[]join_models.WidgetWithRight, error) {
+func (s *Storage) DeleteWidgetAccessRight(ctx context.Context, widgetId int, rightId int) error {
+	conn, err := s.dbPool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	query := `DELETE FROM accessRights
+	USING dashboardOnAccessRights a
+	WHERE a.dashboardId=$1 AND id=$2;`
+	_, err = conn.Exec(ctx, query, widgetId, rightId)
+	return err
+}
+
+func (s *Storage) CreateAccessRight(ctx context.Context, right *models.AccessRight) error {
+	conn, err := s.dbPool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	query := `
+        INSERT INTO accessRights (userId, userGroupId, accessToken, type) 
+        VALUES ($1, $2, $3, $4)
+        RETURNING id;
+    `
+	return conn.QueryRow(
+		ctx,
+		query,
+		right.UserId,
+		right.UserGroupId,
+		right.AccessToken,
+		right.Type,
+	).Scan(&right.Id)
+}
+
+func (s *Storage) CreateDashboardAccessRight(ctx context.Context, dashboardId int, accessId int) (int, error) {
+	conn, err := s.dbPool.Acquire(ctx)
+	if err != nil {
+		return accessId, err
+	}
+	defer conn.Release()
+
+	query := `
+        INSERT INTO dashboardOnAccessRights (accessRightId, dashboardId) 
+        VALUES ($1, $2)
+    `
+	_, err = conn.Query(
+		ctx,
+		query,
+		accessId,
+		dashboardId,
+	)
+
+	return accessId, err
+}
+
+func (s *Storage) CreateWidgetAccessRight(ctx context.Context, widgetId int, accessId int) (int, error) {
+	conn, err := s.dbPool.Acquire(ctx)
+	if err != nil {
+		return accessId, err
+	}
+	defer conn.Release()
+
+	query := `
+        INSERT INTO widgetOnAccessRights (accessRightId, dashboardId) 
+        VALUES ($1, $2)
+    `
+	_, err = conn.Query(
+		ctx,
+		query,
+		accessId,
+		widgetId,
+	)
+
+	return accessId, err
+}
+
+func (s *Storage) GetDashboardRights(ctx context.Context, dashboardId int) ([]models.AccessRight, error) {
 	conn, err := s.dbPool.Acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
-
 	defer conn.Release()
 
-	query := "SELECT w.id, w.dashboardId, w.type, w.config, access.type FROM widgets w JOIN widgetOnAccessRights wr ON w.id=wr.widgetId JOIN accessRights access ON access.id=wr.accessRightId WHERE access.userId=$1;"
+	query := `
+        SELECT a.id, a.userId, a.userGroupId, a.accessToken, a.type
+        FROM accessRights a
+        JOIN dashboardOnAccessRights d ON d.accessRightId = a.id
 
-	count := 0
-	rows, err := conn.Query(ctx, query, userId)
-	if err != nil {
-		return nil, err
-	}
-	for rows.Next() {
-		count++
-	}
-	result := make([]join_models.WidgetWithRight, 0, count)
-
-	rows, err = conn.Query(ctx, query, userId)
+        WHERE d.id = $1;
+    `
+	rows, err := conn.Query(ctx, query, dashboardId)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
+	var results []models.AccessRight
 	for rows.Next() {
-		var item join_models.WidgetWithRight
-		if err := rows.Scan(&item.Id, &item.DashboardId, &item.WidgetType, &item.Config, &item.AccessType); err != nil {
+		var item models.AccessRight
+		if err := rows.Scan(&item.Id, &item.UserId, &item.UserGroupId, &item.AccessToken, &item.Type); err != nil {
 			return nil, err
 		}
-		result = append(result, item)
+		results = append(results, item)
 	}
+	return results, nil
+}
 
-	return &result, nil
+func (s *Storage) GetWidgetRights(ctx context.Context, widgetdId int) ([]models.AccessRight, error) {
+	conn, err := s.dbPool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	query := `
+        SELECT a.id, a.userId, a.userGroupId, a.accessToken, a.type
+        FROM accessRights a
+        JOIN widgetOnAccessRights d ON d.accessRightId = a.id
+
+        WHERE d.id = $1;
+    `
+	rows, err := conn.Query(ctx, query, widgetdId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []models.AccessRight
+	for rows.Next() {
+		var item models.AccessRight
+		if err := rows.Scan(&item.Id, &item.UserId, &item.UserGroupId, &item.AccessToken, &item.Type); err != nil {
+			return nil, err
+		}
+		results = append(results, item)
+	}
+	return results, nil
 }

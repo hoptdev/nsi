@@ -17,22 +17,33 @@ type Service struct {
 	rightsUpdater  RightsUpdater
 	rightsProvider RightsProvider
 	rightsRemover  RightsRemover
+	rightsCreator  RightsCreator
 }
+
+type RightsCreator interface {
+	CreateAccessRight(ctx context.Context, right *models.AccessRight) error
+	CreateDashboardAccessRight(ctx context.Context, dashboardId int, accessId int) (int, error)
+	CreateWidgetAccessRight(ctx context.Context, widgetId int, accessId int) (int, error)
+}
+
 type RightsRemover interface {
-	//DeleteDashboardRight(ctx context.Context, id int) error
-	//DeleteWidgetRight(ctx context.Context, id int) error
+	DeleteDashboardAccessRight(ctx context.Context, dashboardId int, rightId int) error
+	DeleteWidgetAccessRight(ctx context.Context, widgetId int, rightId int) error
 }
 
 type RightsProvider interface {
 	GetDashboardRightByData(ctx context.Context, userId int, dashboardId int) (*models.AccessRight, error) //названия конечно очень отражают суть)))
 	GetWidgetRightByData(ctx context.Context, userId int, widgetIdId int) (*models.AccessRight, error)
+
+	GetDashboardRights(ctx context.Context, dashboardId int) ([]models.AccessRight, error)
+	GetWidgetRights(ctx context.Context, widgetdId int) ([]models.AccessRight, error)
 }
 
 type RightsUpdater interface {
 }
 
-func New(log *slog.Logger, updater RightsUpdater, provider RightsProvider, remover RightsRemover) *Service {
-	return &Service{log, updater, provider, remover}
+func New(log *slog.Logger, updater RightsUpdater, provider RightsProvider, remover RightsRemover, creator RightsCreator) *Service {
+	return &Service{log, updater, provider, remover, creator}
 }
 
 func (service *Service) CheckDashboardRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (err error) {
@@ -61,4 +72,57 @@ func (service *Service) checkRight(ctx context.Context, userId int, rightType mo
 	}
 
 	return nil
+}
+
+func (service *Service) Create(ctx context.Context, dashboardId *int, widgetdId *int, userId int, grantType models.GrantType) (id int, err error) {
+	access := models.AccessRight{
+		Id:     0,
+		UserId: &userId,
+		Type:   grantType,
+	}
+
+	//todo : transaction
+
+	err = service.rightsCreator.CreateAccessRight(ctx, &access)
+	if err != nil {
+		return 0, err
+	}
+
+	id = access.Id
+
+	if dashboardId != nil {
+		id, err = service.rightsCreator.CreateDashboardAccessRight(ctx, *dashboardId, access.Id)
+	} else if widgetdId != nil {
+		id, err = service.rightsCreator.CreateWidgetAccessRight(ctx, *widgetdId, access.Id)
+	}
+
+	return id, err
+}
+
+func (service *Service) Delete(ctx context.Context, dashboardId *int, widgetdId *int, rightId int) error {
+	var err error
+	if dashboardId != nil {
+		err = service.rightsRemover.DeleteDashboardAccessRight(ctx, *dashboardId, rightId)
+	} else if widgetdId != nil {
+		err = service.rightsRemover.DeleteWidgetAccessRight(ctx, *widgetdId, rightId)
+	}
+
+	return err
+}
+
+func (service *Service) Update(ctx context.Context, id int, dashboard models.Dashboard) error {
+	return nil
+}
+
+func (service *Service) GetRights(ctx context.Context, id int, isDasboard bool) ([]models.AccessRight, error) {
+	var result []models.AccessRight
+	var err error
+
+	if isDasboard {
+		result, err = service.rightsProvider.GetDashboardRights(ctx, id)
+	} else {
+		result, err = service.rightsProvider.GetWidgetRights(ctx, id)
+	}
+
+	return result, err
 }

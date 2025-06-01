@@ -21,7 +21,7 @@ type dashboardHelper struct {
 }
 
 type DashboardHandlers interface {
-	Create(ctx context.Context, name string, parentId *int) (id int, err error)
+	Create(ctx context.Context, name string, parentId *int, ownerId int, rightService RightHandler) (id int, err error)
 	Delete(ctx context.Context, id int) error
 	Update(ctx context.Context, id int, dashboard models.Dashboard) error
 
@@ -30,6 +30,7 @@ type DashboardHandlers interface {
 }
 
 type RightHandler interface {
+	Create(ctx context.Context, dashboardId *int, widgetdId *int, userId int, grantType models.GrantType) (id int, err error)
 	CheckDashboardRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (err error)
 }
 
@@ -168,7 +169,8 @@ func (d *dashboardHelper) Create() http.HandlerFunc {
 			return
 		}
 
-		id, err := d.handlers.Create(ctx, params.Name, params.ParentId)
+		userId, _ := strconv.Atoi(r.Header.Get("UserId"))
+		id, err := d.handlers.Create(ctx, params.Name, params.ParentId, userId, d.rights)
 		if err != nil {
 			d.log.Error(err.Error())
 
