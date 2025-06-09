@@ -52,7 +52,7 @@ func (service *Service) Create(ctx context.Context, name string, parentId *int, 
 		return 0, err
 	}
 
-	_, err = rightService.Create(ctx, &id, nil, ownerId, models.Admin)
+	_, err = rightService.Create(ctx, &model.Id, nil, ownerId, models.Admin)
 	if err != nil {
 		return 0, err
 	}
