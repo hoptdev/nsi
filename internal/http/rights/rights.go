@@ -27,8 +27,8 @@ type RightsHandlers interface {
 }
 
 type RightHandler interface {
-	CheckDashboardRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (err error)
-	CheckWidgetRight(ctx context.Context, userId int, widgetId int, rightType models.GrantType) (err error)
+	CheckDashboardRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (right *models.AccessRight, err error)
+	CheckWidgetRight(ctx context.Context, userId int, widgetId int, rightType models.GrantType) (right *models.AccessRight, err error)
 }
 
 func Register(logger *slog.Logger, mux *http.ServeMux, t time.Duration, grpc *grpcHandler.Handler, handlers RightsHandlers, right RightHandler) {
@@ -46,9 +46,9 @@ func Register(logger *slog.Logger, mux *http.ServeMux, t time.Duration, grpc *gr
 func (d *rightsHelper) validateRole(ctx context.Context, w http.ResponseWriter, r *http.Request, role models.GrantType, dashboardId *int, widgetId *int) (err error) {
 	userId, _ := strconv.Atoi(r.Header.Get("UserId"))
 	if dashboardId != nil {
-		err = d.rights.CheckDashboardRight(ctx, userId, *dashboardId, role)
+		_, err = d.rights.CheckDashboardRight(ctx, userId, *dashboardId, role)
 	} else if widgetId != nil {
-		err = d.rights.CheckWidgetRight(ctx, userId, *widgetId, role)
+		_, err = d.rights.CheckWidgetRight(ctx, userId, *widgetId, role)
 	}
 	return err
 }

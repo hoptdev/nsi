@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	models "nsi/internal/domain"
 	join_models "nsi/internal/domain/join"
+	widgetController "nsi/internal/http/widget"
 )
 
 type Service struct {
@@ -17,6 +18,7 @@ type Service struct {
 
 type WidgetProvider interface {
 	GetWidgetsByDashboard(ctx context.Context, userId int, dashboardId int) (*[]join_models.WidgetWithRight, error)
+	GetAllWidgetsByDashboard(ctx context.Context, dashboardId int) (*[]join_models.WidgetWithRight, error)
 }
 
 type WidgetRemover interface {
@@ -34,10 +36,15 @@ func New(log *slog.Logger, updater WidgetUpdater, provider WidgetProvider, widge
 	return &Service{log, updater, provider, widgetRemover, widgetCreator}
 }
 
-func (service *Service) Create(ctx context.Context, name string, dashboardId int, widgetType models.WidgetType, config string) (id int, err error) {
+func (service *Service) Create(ctx context.Context, name string, dashboardId int, widgetType models.WidgetType, config string, ownerId int, rightService widgetController.RightHandler) (id int, err error) {
 	model := &models.Widget{Id: 0, Name: name, DashboardId: dashboardId, WidgetType: widgetType, Config: config}
 
 	err = service.widgetCreator.CreateWidget(ctx, model)
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = rightService.Create(ctx, nil, &model.Id, ownerId, models.Admin)
 	if err != nil {
 		return 0, err
 	}
@@ -55,6 +62,15 @@ func (service *Service) Update(ctx context.Context, id int, dashboard models.Wid
 
 func (service *Service) GetByDashboard(ctx context.Context, userId int, dashboardId int) (*[]join_models.WidgetWithRight, error) {
 	result, err := service.widgetProvider.GetWidgetsByDashboard(ctx, userId, dashboardId)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (service *Service) GetAllByDashboard(ctx context.Context, dashboardId int) (*[]join_models.WidgetWithRight, error) {
+	result, err := service.widgetProvider.GetAllWidgetsByDashboard(ctx, dashboardId)
 	if err != nil {
 		return nil, err
 	}

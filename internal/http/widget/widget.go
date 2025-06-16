@@ -20,15 +20,19 @@ type widgetHelper struct {
 	rights   RightHandler
 }
 type RightHandler interface {
-	CheckDashboardRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (err error)
-	CheckWidgetRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (err error)
+	Create(ctx context.Context, dashboardId *int, widgetdId *int, userId int, grantType models.GrantType) (id int, err error)
+
+	CheckDashboardRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (right *models.AccessRight, err error)
+	CheckWidgetRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (right *models.AccessRight, err error)
 }
 
 type WidgetHandlers interface {
-	Create(ctx context.Context, name string, dashboardId int, widgetType models.WidgetType, config string) (id int, err error)
+	Create(ctx context.Context, name string, dashboardId int, widgetType models.WidgetType, config string, ownerId int, rightService RightHandler) (id int, err error)
 	Delete(ctx context.Context, id int) error
 	Update(ctx context.Context, id int, dashboard models.Widget) error
+
 	GetByDashboard(ctx context.Context, userId int, dashboardId int) (*[]join_models.WidgetWithRight, error)
+	GetAllByDashboard(ctx context.Context, dashboardId int) (*[]join_models.WidgetWithRight, error)
 }
 
 func Register(logger *slog.Logger, mux *http.ServeMux, t time.Duration, grpc *grpcHandler.Handler, handlers WidgetHandlers, rights RightHandler) {
@@ -41,13 +45,13 @@ func Register(logger *slog.Logger, mux *http.ServeMux, t time.Duration, grpc *gr
 
 func (d *widgetHelper) validateRoleWidget(ctx context.Context, w http.ResponseWriter, r *http.Request, role models.GrantType, dashboardId int) error {
 	userId, _ := strconv.Atoi(r.Header.Get("UserId"))
-	err := d.rights.CheckWidgetRight(ctx, userId, dashboardId, role)
+	_, err := d.rights.CheckWidgetRight(ctx, userId, dashboardId, role)
 	return err
 }
-func (d *widgetHelper) validateRoleDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request, role models.GrantType, dashboardId int) error {
+func (d *widgetHelper) validateRoleDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request, role models.GrantType, dashboardId int) (models.GrantType, error) {
 	userId, _ := strconv.Atoi(r.Header.Get("UserId"))
-	err := d.rights.CheckDashboardRight(ctx, userId, dashboardId, role)
-	return err
+	result, err := d.rights.CheckDashboardRight(ctx, userId, dashboardId, role)
+	return result.Type, err
 }
 
 func (d *widgetHelper) Delete(role models.GrantType) http.HandlerFunc {
@@ -97,7 +101,7 @@ func (d *widgetHelper) GetWidgets(role models.GrantType) http.HandlerFunc {
 			return
 		}
 
-		err = d.validateRoleDashboard(ctx, w, r, role, dashboardId)
+		grant, err := d.validateRoleDashboard(ctx, w, r, role, dashboardId)
 		if err != nil {
 			d.log.Error(err.Error())
 
@@ -105,7 +109,14 @@ func (d *widgetHelper) GetWidgets(role models.GrantType) http.HandlerFunc {
 			return
 		}
 
-		widgets, err := d.handlers.GetByDashboard(ctx, userId, dashboardId)
+		var widgets *[]join_models.WidgetWithRight
+
+		if grant == models.Admin {
+			widgets, err = d.handlers.GetAllByDashboard(ctx, dashboardId)
+		} else {
+			widgets, err = d.handlers.GetByDashboard(ctx, userId, dashboardId)
+		}
+
 		if err != nil {
 			d.log.Error(err.Error())
 
@@ -147,7 +158,7 @@ func (d *widgetHelper) Create(role models.GrantType) http.HandlerFunc {
 			return
 		}
 
-		err = d.validateRoleDashboard(ctx, w, r, role, params.DashboardId)
+		_, err = d.validateRoleDashboard(ctx, w, r, role, params.DashboardId)
 		if err != nil {
 			d.log.Error(err.Error())
 
@@ -155,7 +166,9 @@ func (d *widgetHelper) Create(role models.GrantType) http.HandlerFunc {
 			return
 		}
 
-		id, err := d.handlers.Create(ctx, params.Name, params.DashboardId, models.WidgetType(params.WidgetType), params.Config)
+		userId, _ := strconv.Atoi(r.Header.Get("UserId"))
+
+		id, err := d.handlers.Create(ctx, params.Name, params.DashboardId, models.WidgetType(params.WidgetType), params.Config, userId, d.rights)
 		if err != nil {
 			d.log.Error(err.Error())
 

@@ -31,7 +31,7 @@ type DashboardHandlers interface {
 
 type RightHandler interface {
 	Create(ctx context.Context, dashboardId *int, widgetdId *int, userId int, grantType models.GrantType) (id int, err error)
-	CheckDashboardRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (err error)
+	CheckDashboardRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (right *models.AccessRight, terr error)
 }
 
 func Register(logger *slog.Logger, mux *http.ServeMux, t time.Duration, grpc *grpcHandler.Handler, handlers DashboardHandlers, right RightHandler) {
@@ -45,7 +45,7 @@ func Register(logger *slog.Logger, mux *http.ServeMux, t time.Duration, grpc *gr
 
 func (d *dashboardHelper) validateRole(ctx context.Context, w http.ResponseWriter, r *http.Request, role models.GrantType, dashboardId int) error {
 	userId, _ := strconv.Atoi(r.Header.Get("UserId"))
-	err := d.rights.CheckDashboardRight(ctx, userId, dashboardId, role)
+	_, err := d.rights.CheckDashboardRight(ctx, userId, dashboardId, role)
 	return err
 }
 

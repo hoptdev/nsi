@@ -31,7 +31,7 @@ func (s *Storage) DeleteWidget(ctx context.Context, id int) error {
 
 	defer conn.Release()
 
-	query := "DELETE FROM dashboards WHERE id=$1;"
+	query := "DELETE FROM widgets WHERE id=$1;"
 	_, err = conn.Exec(ctx, query, id)
 
 	return err
@@ -66,6 +66,34 @@ func (s *Storage) GetWidgetsByDashboard(ctx context.Context, userId int, dashboa
 	for rows.Next() {
 		var item join_models.WidgetWithRight
 		if err := rows.Scan(&item.Id, &item.DashboardId, &item.WidgetType, &item.Config, &item.AccessType); err != nil {
+			return nil, err
+		}
+		result = append(result, item)
+	}
+
+	return &result, nil
+}
+
+func (s *Storage) GetAllWidgetsByDashboard(ctx context.Context, dashboardId int) (*[]join_models.WidgetWithRight, error) {
+	conn, err := s.dbPool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer conn.Release()
+
+	query := "SELECT w.id, w.dashboardId, w.type, w.config FROM widgets w WHERE w.dashboardId=$1;"
+
+	rows, err := conn.Query(ctx, query, dashboardId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []join_models.WidgetWithRight
+	for rows.Next() {
+		var item join_models.WidgetWithRight
+		if err := rows.Scan(&item.Id, &item.DashboardId, &item.WidgetType, &item.Config); err != nil {
 			return nil, err
 		}
 		result = append(result, item)

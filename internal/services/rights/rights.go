@@ -46,14 +46,14 @@ func New(log *slog.Logger, updater RightsUpdater, provider RightsProvider, remov
 	return &Service{log, updater, provider, remover, creator}
 }
 
-func (service *Service) CheckDashboardRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (err error) {
+func (service *Service) CheckDashboardRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (right *models.AccessRight, err error) {
 	return service.checkRight(ctx, userId, rightType, &dashboardId, nil)
 }
-func (service *Service) CheckWidgetRight(ctx context.Context, userId int, widgetId int, rightType models.GrantType) (err error) {
+func (service *Service) CheckWidgetRight(ctx context.Context, userId int, widgetId int, rightType models.GrantType) (right *models.AccessRight, err error) {
 	return service.checkRight(ctx, userId, rightType, nil, &widgetId)
 }
 
-func (service *Service) checkRight(ctx context.Context, userId int, rightType models.GrantType, dashboardId *int, widgetId *int) error {
+func (service *Service) checkRight(ctx context.Context, userId int, rightType models.GrantType, dashboardId *int, widgetId *int) (*models.AccessRight, error) {
 	var right *models.AccessRight
 	var err error
 
@@ -64,14 +64,14 @@ func (service *Service) checkRight(ctx context.Context, userId int, rightType mo
 	}
 
 	if err != nil || right == nil {
-		return ErrRightNotFound
+		return nil, ErrRightNotFound
 	}
 
 	if right.Type > rightType {
-		return ErrNotEnoughRights
+		return nil, ErrNotEnoughRights
 	}
 
-	return nil
+	return right, nil
 }
 
 func (service *Service) Create(ctx context.Context, dashboardId *int, widgetdId *int, userId int, grantType models.GrantType) (id int, err error) {
