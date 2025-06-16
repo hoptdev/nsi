@@ -108,7 +108,7 @@ func (s *Storage) CreateWidgetAccessRight(ctx context.Context, widgetId int, acc
 	defer conn.Release()
 
 	query := `
-        INSERT INTO widgetOnAccessRights (accessRightId, dashboardId) 
+        INSERT INTO widgetOnAccessRights (accessRightId, widgetId) 
         VALUES ($1, $2)
     `
 	_, err = conn.Query(
