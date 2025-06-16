@@ -164,7 +164,7 @@ func (s *Storage) GetWidgetRights(ctx context.Context, widgetdId int) ([]models.
         FROM accessRights a
         JOIN widgetOnAccessRights d ON d.accessRightId = a.id
 
-        WHERE d.id = $1;
+        WHERE d.widgetId = $1;
     `
 	rows, err := conn.Query(ctx, query, widgetdId)
 	if err != nil {

@@ -111,9 +111,9 @@ func (s *Storage) GetWidgetRightByData(ctx context.Context, userId int, widgetId
 	defer conn.Release()
 	var result models.AccessRight
 
-	query := "SELECT ar.* FROM accessRights ar LEFT JOIN widgetOnAccessRights d ON ar.id=d.accessRightId WHERE d.widgetId=$1 AND ar.userId=$2;"
+	query := "SELECT ar.id, ar.userId, ar.usergroupId, ar.accesstoken, ar.type FROM accessRights ar LEFT JOIN widgetOnAccessRights d ON ar.id=d.accessRightId WHERE d.widgetId=$1 AND ar.userId=$2;"
 	row := conn.QueryRow(ctx, query, widgetId, userId)
-	if err := row.Scan(&result); err != nil {
+	if err := row.Scan(&result.Id, &result.UserId, &result.UserGroupId, &result.AccessToken, &result.Type); err != nil {
 		return nil, err
 	}
 

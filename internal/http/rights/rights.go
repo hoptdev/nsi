@@ -172,6 +172,6 @@ func (d *rightsHelper) Get(role models.GrantType, isDasboard bool) http.HandlerF
 			return
 		}
 
-		fmt.Fprint(w, result)
+		fmt.Fprint(w, string(result))
 	}
 }
