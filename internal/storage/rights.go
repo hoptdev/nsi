@@ -182,3 +182,45 @@ func (s *Storage) GetWidgetRights(ctx context.Context, widgetdId int) ([]models.
 	}
 	return results, nil
 }
+
+func (s *Storage) GetWidgetRightByData(ctx context.Context, userId int, widgetId int) (*models.AccessRight, error) {
+	conn, err := s.dbPool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer conn.Release()
+	var result models.AccessRight
+
+	query := `WITH widget_dash AS (
+		SELECT dashboardId
+		FROM widgets 
+		WHERE id = $1
+		LIMIT 1
+	)
+	SELECT 
+		ar.id, 
+		ar.userId, 
+		ar.usergroupId, 
+		ar.accesstoken, 
+		ar.type
+	FROM accessRights ar
+	LEFT JOIN widgetOnAccessRights wor 
+		ON wor.accessRightId = ar.id 
+		AND wor.widgetId = $1
+	LEFT JOIN dashboardOnAccessRights dor 
+		ON dor.accessRightId = ar.id
+		AND dor.dashboardId = (SELECT dashboardId FROM widget_dash)
+		AND ar.type = 'admin'
+	WHERE ar.userId = $2
+	AND (wor.widgetId IS NOT NULL OR dor.dashboardId IS NOT NULL)
+	ORDER BY 
+		CASE WHEN wor.widgetId IS NOT NULL THEN 0 ELSE 1 END
+	LIMIT 1;`
+	row := conn.QueryRow(ctx, query, widgetId, userId)
+	if err := row.Scan(&result.Id, &result.UserId, &result.UserGroupId, &result.AccessToken, &result.Type); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}

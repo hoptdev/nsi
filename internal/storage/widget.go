@@ -102,20 +102,23 @@ func (s *Storage) GetAllWidgetsByDashboard(ctx context.Context, dashboardId int)
 	return &result, nil
 }
 
-func (s *Storage) GetWidgetRightByData(ctx context.Context, userId int, widgetId int) (*models.AccessRight, error) {
-	conn, err := s.dbPool.Acquire(ctx)
-	if err != nil {
-		return nil, err
-	}
+func (s *Storage) UpdatePosition(id int, x, y float64) error {
+	query := `
+        UPDATE widgets
+        SET config = jsonb_set(
+            jsonb_set(
+                config,
+                '{position,x}',
+                to_jsonb($1::float),
+                true
+            ),
+            '{position,y}',
+            to_jsonb($2::float),
+            true
+        )
+        WHERE id = $3
+    `
 
-	defer conn.Release()
-	var result models.AccessRight
-
-	query := "SELECT ar.id, ar.userId, ar.usergroupId, ar.accesstoken, ar.type FROM accessRights ar LEFT JOIN widgetOnAccessRights d ON ar.id=d.accessRightId WHERE d.widgetId=$1 AND ar.userId=$2;"
-	row := conn.QueryRow(ctx, query, widgetId, userId)
-	if err := row.Scan(&result.Id, &result.UserId, &result.UserGroupId, &result.AccessToken, &result.Type); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
+	_, err := s.dbPool.Exec(context.Background(), query, x, y, id)
+	return err
 }

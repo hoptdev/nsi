@@ -30,6 +30,7 @@ type WidgetCreator interface {
 }
 
 type WidgetUpdater interface {
+	UpdatePosition(id int, x, y float64) error
 }
 
 func New(log *slog.Logger, updater WidgetUpdater, provider WidgetProvider, widgetRemover WidgetRemover, widgetCreator WidgetCreator) *Service {
@@ -56,7 +57,12 @@ func (service *Service) Delete(ctx context.Context, id int) error {
 	return service.widgetRemover.DeleteWidget(ctx, id)
 }
 
-func (service *Service) Update(ctx context.Context, id int, dashboard models.Widget) error {
+func (service *Service) UpdatePos(ctx context.Context, id int, x, y float64) error {
+	err := service.widgetUpdater.UpdatePosition(id, x, y)
+	if err != nil {
+		return nil
+	}
+
 	return nil
 }
 
