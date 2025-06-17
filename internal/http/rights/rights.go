@@ -63,13 +63,13 @@ func (d *rightsHelper) Update(role models.GrantType) http.HandlerFunc {
 		d.log.Info(fmt.Sprintf("[%v] [%v] request", r.Method, r.URL.Path))
 
 		ctx, cancel := context.WithTimeout(r.Context(), d.timeout)
-		userId, _ := strconv.Atoi(r.Header.Get("UserId"))
 
 		defer cancel()
 		rightId, err1 := strconv.Atoi(r.PathValue("rightId"))
 
 		params := struct {
-			Type models.GrantType `json:"type"`
+			UserId int              `json:"userId"`
+			Type   models.GrantType `json:"type"`
 		}{}
 
 		err := json.NewDecoder(r.Body).Decode(&params)
@@ -87,7 +87,7 @@ func (d *rightsHelper) Update(role models.GrantType) http.HandlerFunc {
 			return
 		}
 
-		id, err := d.handlers.Update(ctx, userId, rightId, params.Type)
+		id, err := d.handlers.Update(ctx, params.UserId, rightId, params.Type)
 		if err != nil {
 			d.log.Error(err.Error())
 
