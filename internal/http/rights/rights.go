@@ -8,6 +8,7 @@ import (
 	"net/http"
 	grpcHandler "nsi/internal/auth"
 	models "nsi/internal/domain"
+	"nsi/internal/services/rights"
 	"strconv"
 	"time"
 )
@@ -53,7 +54,7 @@ func (d *rightsHelper) validateRole(ctx context.Context, w http.ResponseWriter, 
 	} else if widgetId != nil {
 		_, err = d.rights.CheckWidgetRight(ctx, userId, *widgetId, role)
 	} else if accessId != nil {
-		_, err = d.rights.CheckWidgetRight(ctx, userId, *widgetId, role)
+		_, err = d.rights.CheckAccessRight(ctx, userId, *accessId, role)
 	}
 	return err
 }
@@ -125,6 +126,19 @@ func (d *rightsHelper) Create(role models.GrantType) http.HandlerFunc {
 			d.log.Error(err.Error())
 
 			http.Error(w, "Permission denied", http.StatusForbidden)
+			return
+		}
+
+		if params.DashboardId != nil {
+			_, err = d.rights.CheckDashboardRight(ctx, params.UserId, *params.DashboardId, params.Type)
+		} else if params.WidgetId != nil {
+			_, err = d.rights.CheckWidgetRight(ctx, params.UserId, *params.WidgetId, params.Type)
+		}
+
+		if err != rights.ErrRightNotFound {
+			d.log.Error(err.Error())
+
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 

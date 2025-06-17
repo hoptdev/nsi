@@ -61,7 +61,7 @@ func (service *Service) CheckAccessRight(ctx context.Context, userId int, access
 	return service.checkRight(ctx, userId, rightType, nil, nil, &accessId)
 }
 
-func (service *Service) checkRight(ctx context.Context, userId int, rightType models.GrantType, dashboardId *int, widgetId *int, accessId *int) (*models.AccessRight, error) {
+func (service *Service) checkRight(ctx context.Context, userId int, rightType models.GrantType, dashboardId, widgetId, accessId *int) (*models.AccessRight, error) {
 	var right *models.AccessRight
 	var err error
 
@@ -93,12 +93,6 @@ func (service *Service) Create(ctx context.Context, dashboardId *int, widgetdId 
 
 	//todo : transaction
 	_, err = service.checkRight(ctx, userId, grantType, dashboardId, widgetdId, nil)
-	if err != ErrRightNotFound {
-		//accesssCheck.Type = grantType
-		//return service.Update(ctx, userId, accesssCheck)
-
-		return 0, ErrRightExists
-	}
 
 	err = service.rightsCreator.CreateAccessRight(ctx, &access)
 	if err != nil {
