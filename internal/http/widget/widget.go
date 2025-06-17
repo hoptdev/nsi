@@ -40,7 +40,7 @@ func Register(logger *slog.Logger, mux *http.ServeMux, t time.Duration, grpc *gr
 	helper := &widgetHelper{logger, t, handlers, rights}
 
 	mux.HandleFunc("POST /widget/create", grpc.ValidateHandler(helper.Create(models.Update)))
-	mux.HandleFunc("PUT /widget/pos/{id}", grpc.ValidateHandler(helper.Update(models.Update)))
+	mux.HandleFunc("PATCH /widget/pos/{id}", grpc.ValidateHandler(helper.Update(models.Update)))
 	mux.HandleFunc("DELETE /widget/{id}", grpc.ValidateHandler(helper.Delete(models.Admin)))
 	mux.HandleFunc("GET /widgets", grpc.ValidateHandler(helper.GetWidgets(models.ReadOnly)))
 }
