@@ -27,6 +27,7 @@ func Register(logger *slog.Logger, mux *http.ServeMux, t time.Duration, grpc *gr
 
 	mux.HandleFunc("POST /user/signin", helper.SignIn())
 	mux.HandleFunc("POST /user/signup", helper.SignUp())
+	mux.HandleFunc("POST /token/refresh", helper.Refresh())
 }
 
 func (d *userHelper) SignIn() http.HandlerFunc {
@@ -105,7 +106,7 @@ func (d *userHelper) Refresh() http.HandlerFunc {
 		defer cancel()
 
 		params := struct {
-			Token string `json:"token"`
+			Token string `json:"refreshToken"`
 		}{}
 
 		err := json.NewDecoder(r.Body).Decode(&params)
