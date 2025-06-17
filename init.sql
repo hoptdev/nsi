@@ -11,7 +11,7 @@ CREATE TABLE widgets (
     name varchar(255),
     dashboardId int NOT NULL REFERENCES dashboards ON DELETE CASCADE,
     type widgetType NOT NULL,
-    config json NOT NULL
+    config jsonb NOT NULL
 );
 
 CREATE TYPE grantType AS ENUM ('read', 'update', 'admin');

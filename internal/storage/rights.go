@@ -5,6 +5,24 @@ import (
 	models "nsi/internal/domain"
 )
 
+func (s *Storage) GetAccessRightByData(ctx context.Context, userId int, id int) (*models.AccessRight, error) {
+	conn, err := s.dbPool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer conn.Release()
+	var result models.AccessRight
+
+	query := "SELECT ar.* FROM accessRights ar WHERE ar.Id=$1 AND ar.userId=$2;"
+	row := conn.QueryRow(ctx, query, id, userId)
+	if err := row.Scan(&result.Id, &result.UserId, &result.UserGroupId, &result.AccessToken, &result.Type); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 func (s *Storage) UpdateAccessRight(ctx context.Context, id int, update models.AccessRight) error {
 	conn, err := s.dbPool.Acquire(ctx)
 	if err != nil {
@@ -24,6 +42,27 @@ func (s *Storage) UpdateAccessRight(ctx context.Context, id int, update models.A
 		update.UserGroupId,
 		update.AccessToken,
 		update.Type,
+		id,
+	)
+	return err
+}
+
+func (s *Storage) UpdateAccessRightType(ctx context.Context, id int, grant models.GrantType) error {
+	conn, err := s.dbPool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	query := `
+        UPDATE accessRights 
+        SET type = $1 
+        WHERE id = $2;
+    `
+	_, err = conn.Exec(
+		ctx,
+		query,
+		grant,
 		id,
 	)
 	return err
@@ -133,7 +172,7 @@ func (s *Storage) GetDashboardRights(ctx context.Context, dashboardId int) ([]mo
         FROM accessRights a
         JOIN dashboardOnAccessRights d ON d.accessRightId = a.id
 
-        WHERE d.id = $1;
+        WHERE d.dashboardId = $1;
     `
 	rows, err := conn.Query(ctx, query, dashboardId)
 	if err != nil {

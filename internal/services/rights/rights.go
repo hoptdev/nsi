@@ -10,6 +10,7 @@ import (
 var (
 	ErrRightNotFound   = errors.New("Right not found")
 	ErrNotEnoughRights = errors.New("Not enough rights")
+	ErrRightExists     = errors.New("Right exists")
 )
 
 type Service struct {
@@ -37,9 +38,13 @@ type RightsProvider interface {
 
 	GetDashboardRights(ctx context.Context, dashboardId int) ([]models.AccessRight, error)
 	GetWidgetRights(ctx context.Context, widgetdId int) ([]models.AccessRight, error)
+
+	GetAccessRightByData(ctx context.Context, userId int, id int) (*models.AccessRight, error)
 }
 
 type RightsUpdater interface {
+	UpdateAccessRight(ctx context.Context, id int, update models.AccessRight) error
+	UpdateAccessRightType(ctx context.Context, id int, grant models.GrantType) error
 }
 
 func New(log *slog.Logger, updater RightsUpdater, provider RightsProvider, remover RightsRemover, creator RightsCreator) *Service {
@@ -47,13 +52,16 @@ func New(log *slog.Logger, updater RightsUpdater, provider RightsProvider, remov
 }
 
 func (service *Service) CheckDashboardRight(ctx context.Context, userId int, dashboardId int, rightType models.GrantType) (right *models.AccessRight, err error) {
-	return service.checkRight(ctx, userId, rightType, &dashboardId, nil)
+	return service.checkRight(ctx, userId, rightType, &dashboardId, nil, nil)
 }
 func (service *Service) CheckWidgetRight(ctx context.Context, userId int, widgetId int, rightType models.GrantType) (right *models.AccessRight, err error) {
-	return service.checkRight(ctx, userId, rightType, nil, &widgetId)
+	return service.checkRight(ctx, userId, rightType, nil, &widgetId, nil)
+}
+func (service *Service) CheckAccessRight(ctx context.Context, userId int, accessId int, rightType models.GrantType) (right *models.AccessRight, err error) {
+	return service.checkRight(ctx, userId, rightType, nil, nil, &accessId)
 }
 
-func (service *Service) checkRight(ctx context.Context, userId int, rightType models.GrantType, dashboardId *int, widgetId *int) (*models.AccessRight, error) {
+func (service *Service) checkRight(ctx context.Context, userId int, rightType models.GrantType, dashboardId *int, widgetId *int, accessId *int) (*models.AccessRight, error) {
 	var right *models.AccessRight
 	var err error
 
@@ -61,6 +69,8 @@ func (service *Service) checkRight(ctx context.Context, userId int, rightType mo
 		right, err = service.rightsProvider.GetDashboardRightByData(ctx, userId, *dashboardId)
 	} else if widgetId != nil {
 		right, err = service.rightsProvider.GetWidgetRightByData(ctx, userId, *widgetId)
+	} else if accessId != nil {
+		right, err = service.rightsProvider.GetAccessRightByData(ctx, userId, *accessId)
 	}
 
 	if err != nil || right == nil {
@@ -68,7 +78,7 @@ func (service *Service) checkRight(ctx context.Context, userId int, rightType mo
 	}
 
 	if right.Type > rightType {
-		return nil, ErrNotEnoughRights
+		return right, ErrNotEnoughRights
 	}
 
 	return right, nil
@@ -82,6 +92,13 @@ func (service *Service) Create(ctx context.Context, dashboardId *int, widgetdId 
 	}
 
 	//todo : transaction
+	_, err = service.checkRight(ctx, userId, grantType, dashboardId, widgetdId, nil)
+	if err != ErrRightNotFound {
+		//accesssCheck.Type = grantType
+		//return service.Update(ctx, userId, accesssCheck)
+
+		return 0, ErrRightExists
+	}
 
 	err = service.rightsCreator.CreateAccessRight(ctx, &access)
 	if err != nil {
@@ -110,8 +127,8 @@ func (service *Service) Delete(ctx context.Context, dashboardId *int, widgetdId 
 	return err
 }
 
-func (service *Service) Update(ctx context.Context, id int, dashboard models.Dashboard) error {
-	return nil
+func (service *Service) Update(ctx context.Context, userId int, id int, grant models.GrantType) (int, error) {
+	return id, service.rightsUpdater.UpdateAccessRightType(ctx, id, grant)
 }
 
 func (service *Service) GetRights(ctx context.Context, id int, isDasboard bool) ([]models.AccessRight, error) {

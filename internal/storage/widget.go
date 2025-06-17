@@ -105,18 +105,18 @@ func (s *Storage) GetAllWidgetsByDashboard(ctx context.Context, dashboardId int)
 func (s *Storage) UpdatePosition(id int, x, y float64) error {
 	query := `
         UPDATE widgets
-        SET config = jsonb_set(
-            jsonb_set(
-                config,
-                '{position,x}',
-                to_jsonb($1::float),
-                true
-            ),
-            '{position,y}',
-            to_jsonb($2::float),
-            true
-        )
-        WHERE id = $3
+		SET config = jsonb_set(
+			jsonb_set(
+				COALESCE(config, '{}')::jsonb, 
+				'{position, x}',
+				to_jsonb($1::float),
+				true 
+			),
+			'{position, y}',
+			to_jsonb($2::float),
+			true
+		)
+		WHERE id = $3;
     `
 
 	_, err := s.dbPool.Exec(context.Background(), query, x, y, id)
