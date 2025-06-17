@@ -136,9 +136,7 @@ func (d *rightsHelper) Create(role models.GrantType) http.HandlerFunc {
 		}
 
 		if err != rights.ErrRightNotFound {
-			d.log.Error(err.Error())
-
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Right found", http.StatusBadRequest)
 			return
 		}
 
