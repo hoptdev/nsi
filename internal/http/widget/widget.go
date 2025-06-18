@@ -31,6 +31,7 @@ type WidgetHandlers interface {
 	Delete(ctx context.Context, id int) error
 	//Update(ctx context.Context, id int, widgetType models.GrantType) error
 	UpdatePos(ctx context.Context, id int, x, y float64) error
+	UpdateConfig(ctx context.Context, id int, config string) error
 
 	GetByDashboard(ctx context.Context, userId int, dashboardId int) (*[]join_models.WidgetWithRight, error)
 	GetAllByDashboard(ctx context.Context, dashboardId int) (*[]join_models.WidgetWithRight, error)
@@ -40,7 +41,9 @@ func Register(logger *slog.Logger, mux *http.ServeMux, t time.Duration, grpc *gr
 	helper := &widgetHelper{logger, t, handlers, rights}
 
 	mux.HandleFunc("POST /widget/create", grpc.ValidateHandler(helper.Create(models.Update)))
-	mux.HandleFunc("PATCH /widget/pos/{id}", grpc.ValidateHandler(helper.Update(models.Update)))
+	mux.HandleFunc("PATCH /widget/pos/{id}", grpc.ValidateHandler(helper.UpdatePos(models.Update)))
+	mux.HandleFunc("PATCH /widget/{id}", grpc.ValidateHandler(helper.UpdateConfig(models.Update)))
+
 	mux.HandleFunc("DELETE /widget/{id}", grpc.ValidateHandler(helper.Delete(models.Admin)))
 	mux.HandleFunc("GET /widgets", grpc.ValidateHandler(helper.GetWidgets(models.ReadOnly)))
 }
@@ -60,7 +63,49 @@ func (d *widgetHelper) validateRoleDashboard(ctx context.Context, w http.Respons
 	return &result.Type, err
 }
 
-func (d *widgetHelper) Update(role models.GrantType) http.HandlerFunc {
+func (d *widgetHelper) UpdateConfig(role models.GrantType) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		d.log.Info(fmt.Sprintf("[%v] [%v] request", r.Method, r.URL.Path))
+
+		ctx, cancel := context.WithTimeout(r.Context(), d.timeout)
+		defer cancel()
+
+		params := struct {
+			Config string `json:"config"` // not safe. todo. исправить уязвимости, всё сломается если навести суету через девтул
+		}{}
+
+		err := json.NewDecoder(r.Body).Decode(&params)
+
+		if err != nil {
+			http.Error(w, "Invalid data", http.StatusBadRequest)
+			return
+		}
+
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 32)
+		if err != nil {
+			http.Error(w, "Invalid data", http.StatusBadRequest)
+			return
+		}
+
+		err = d.validateRoleWidget(ctx, w, r, role, int(id))
+		if err != nil {
+			d.log.Error(err.Error())
+
+			http.Error(w, "Permission denied", http.StatusForbidden)
+			return
+		}
+
+		err = d.handlers.UpdateConfig(ctx, int(id), params.Config)
+		if err != nil {
+			d.log.Error(err.Error())
+
+			http.Error(w, "Error", http.StatusBadRequest)
+			return
+		}
+	}
+}
+
+func (d *widgetHelper) UpdatePos(role models.GrantType) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		d.log.Info(fmt.Sprintf("[%v] [%v] request", r.Method, r.URL.Path))
 

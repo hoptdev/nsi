@@ -122,3 +122,14 @@ func (s *Storage) UpdatePosition(id int, x, y float64) error {
 	_, err := s.dbPool.Exec(context.Background(), query, x, y, id)
 	return err
 }
+
+func (s *Storage) UpdateConfig(id int, config string) error {
+	query := `
+        UPDATE widgets 
+        SET config = $1 
+        WHERE id = $2;
+    `
+
+	_, err := s.dbPool.Exec(context.Background(), query, config, id)
+	return err
+}
