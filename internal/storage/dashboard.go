@@ -95,7 +95,7 @@ func (s *Storage) GetDashboardRightByData(ctx context.Context, userId int, dashb
 	defer conn.Release()
 	var result models.AccessRight
 
-	query := "SELECT ar.* FROM accessRights ar LEFT JOIN dashboardOnAccessRights d ON ar.id=d.accessRightId WHERE d.dashboardId=$1 AND ar.userId=$2;"
+	query := "SELECT ar.* FROM accessRights ar JOIN dashboardOnAccessRights d ON ar.id=d.accessRightId WHERE d.dashboardId=$1 AND ar.userId=$2;"
 	row := conn.QueryRow(ctx, query, dashboardId, userId)
 	if err := row.Scan(&result.Id, &result.UserId, &result.UserGroupId, &result.AccessToken, &result.Type); err != nil {
 		return nil, err

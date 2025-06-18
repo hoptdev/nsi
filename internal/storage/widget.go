@@ -45,10 +45,10 @@ func (s *Storage) GetWidgetsByDashboard(ctx context.Context, userId int, dashboa
 
 	defer conn.Release()
 
-	query := "SELECT w.id, w.dashboardId, w.type, w.config, access.type FROM widgets w JOIN widgetOnAccessRights wr ON w.id=wr.widgetId JOIN accessRights access ON access.id=wr.accessRightId WHERE access.userId=$1;"
+	query := "SELECT w.id, w.dashboardId, w.type, w.config, access.type FROM widgets w JOIN widgetOnAccessRights wr ON w.id=wr.widgetId JOIN accessRights access ON access.id=wr.accessRightId WHERE w.dashboardId=$1 AND access.userId=$2;"
 
 	count := 0
-	rows, err := conn.Query(ctx, query, userId)
+	rows, err := conn.Query(ctx, query, dashboardId, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (s *Storage) GetWidgetsByDashboard(ctx context.Context, userId int, dashboa
 	}
 	result := make([]join_models.WidgetWithRight, 0, count)
 
-	rows, err = conn.Query(ctx, query, userId)
+	rows, err = conn.Query(ctx, query, dashboardId, userId)
 	if err != nil {
 		return nil, err
 	}

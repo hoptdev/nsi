@@ -77,11 +77,11 @@ func (service *Service) checkRight(ctx context.Context, userId int, rightType mo
 		return nil, ErrRightNotFound
 	}
 
-	if right.Type > rightType {
-		return right, ErrNotEnoughRights
+	if right.Type.ToInt() >= rightType.ToInt() {
+		return right, nil
 	}
 
-	return right, nil
+	return nil, ErrNotEnoughRights
 }
 
 func (service *Service) Create(ctx context.Context, dashboardId *int, widgetdId *int, userId int, grantType models.GrantType) (id int, err error) {

@@ -50,10 +50,14 @@ func (d *widgetHelper) validateRoleWidget(ctx context.Context, w http.ResponseWr
 	_, err := d.rights.CheckWidgetRight(ctx, userId, dashboardId, role)
 	return err
 }
-func (d *widgetHelper) validateRoleDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request, role models.GrantType, dashboardId int) (models.GrantType, error) {
+func (d *widgetHelper) validateRoleDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request, role models.GrantType, dashboardId int) (*models.GrantType, error) {
 	userId, _ := strconv.Atoi(r.Header.Get("UserId"))
 	result, err := d.rights.CheckDashboardRight(ctx, userId, dashboardId, role)
-	return result.Type, err
+	if result == nil {
+		return nil, err
+	}
+
+	return &result.Type, err
 }
 
 func (d *widgetHelper) Update(role models.GrantType) http.HandlerFunc {
@@ -156,10 +160,10 @@ func (d *widgetHelper) GetWidgets(role models.GrantType) http.HandlerFunc {
 
 		var widgets *[]join_models.WidgetWithRight
 
-		if grant == models.Admin {
-			widgets, err = d.handlers.GetAllByDashboard(ctx, dashboardId)
-		} else {
+		if grant != nil {
 			widgets, err = d.handlers.GetByDashboard(ctx, userId, dashboardId)
+		} else if grant != nil && *grant == models.Admin {
+			widgets, err = d.handlers.GetAllByDashboard(ctx, dashboardId)
 		}
 
 		if err != nil {
