@@ -9,6 +9,8 @@ import (
 	grpcHandler "nsi/internal/auth"
 	models "nsi/internal/domain"
 	join_models "nsi/internal/domain/join"
+	producer "nsi/internal/kafka"
+	"nsi/internal/kafka/consumer"
 	"strconv"
 	"time"
 )
@@ -145,6 +147,14 @@ func (d *widgetHelper) UpdatePos(role models.GrantType) http.HandlerFunc {
 			http.Error(w, "Error", http.StatusBadRequest)
 			return
 		}
+
+		//спрятать в сервис уровень todo Не работает если LDS не слушает, надо что то придумать
+		userId, _ := strconv.Atoi(r.Header.Get("UserId"))
+
+		var q = fmt.Sprintf("{\"type\":\"widget_update_pos\", \"id\": %v, \"x\": %v, \"y\": %v}", id, params.X, params.Y)
+
+		consumer.Init(fmt.Sprintf("nsi.%v.widget.updatepos", userId)) //todo хуйня полная
+		producer.Write(fmt.Sprintf("nsi.%v.widget.updatepos", userId), q)
 	}
 }
 

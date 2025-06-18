@@ -61,9 +61,8 @@ func (service *Service) Delete(ctx context.Context, id int) error {
 func (service *Service) UpdatePos(ctx context.Context, id int, x, y float64) error {
 	err := service.widgetUpdater.UpdatePosition(id, x, y)
 	if err != nil {
-		return nil
+		return err
 	}
-
 	return nil
 }
 
