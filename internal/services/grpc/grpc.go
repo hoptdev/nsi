@@ -52,15 +52,15 @@ func (s *Service) SignUp(ctx context.Context, login string, password string) (bo
 	return resp.Success, nil
 }
 
-func (s *Service) Refresh(ctx context.Context, token string) (string, error) {
+func (s *Service) Refresh(ctx context.Context, token string) (string, string, error) {
 	request := &ssov1.RefreshRequest{
 		RefreshToken: token,
 	}
 	resp, err := s.app.GRPCClient.Refresh(ctx, request)
 
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return resp.RefreshToken, err
+	return resp.RefreshToken, resp.AccessToken, err
 }

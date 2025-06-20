@@ -19,7 +19,7 @@ type userHelper struct {
 type UserHandlers interface {
 	SignIn(ctx context.Context, login string, password string) (refresh string, access string, err error)
 	SignUp(ctx context.Context, login string, password string) (bool, error)
-	Refresh(ctx context.Context, token string) (string, error)
+	Refresh(ctx context.Context, token string) (string, string, error)
 }
 
 func Register(logger *slog.Logger, mux *http.ServeMux, t time.Duration, grpc *grpcHandler.Handler, handlers UserHandlers) {
@@ -116,7 +116,7 @@ func (d *userHelper) Refresh() http.HandlerFunc {
 			return
 		}
 
-		id, err := d.handlers.Refresh(ctx, params.Token)
+		refreshToken, accessToken, err := d.handlers.Refresh(ctx, params.Token)
 		if err != nil {
 			d.log.Error(err.Error())
 
@@ -124,6 +124,13 @@ func (d *userHelper) Refresh() http.HandlerFunc {
 			return
 		}
 
-		fmt.Fprint(w, id)
+		var result = struct {
+			RefreshAccess string
+			AccessToken   string
+		}{RefreshAccess: refreshToken, AccessToken: accessToken}
+
+		js, err := json.Marshal(result)
+
+		fmt.Fprint(w, string(js))
 	}
 }

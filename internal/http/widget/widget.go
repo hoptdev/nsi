@@ -104,6 +104,14 @@ func (d *widgetHelper) UpdateConfig(role models.GrantType) http.HandlerFunc {
 			http.Error(w, "Error", http.StatusBadRequest)
 			return
 		}
+
+		//спрятать в сервис уровень todo Не работает если LDS не слушает, надо что то придумать
+		userId, _ := strconv.Atoi(r.Header.Get("UserId"))
+
+		var q = fmt.Sprintf("{\"type\":\"widget_update_config\", \"id\": %v, \"config\":%v}", id, params.Config)
+
+		consumer.Init(fmt.Sprintf("nsi.%v", userId)) //todo хуйня полная
+		producer.Write(fmt.Sprintf("nsi.%v", userId), q)
 	}
 }
 
@@ -153,8 +161,8 @@ func (d *widgetHelper) UpdatePos(role models.GrantType) http.HandlerFunc {
 
 		var q = fmt.Sprintf("{\"type\":\"widget_update_pos\", \"id\": %v, \"x\": %v, \"y\": %v}", id, params.X, params.Y)
 
-		consumer.Init(fmt.Sprintf("nsi.%v.widget.updatepos", userId)) //todo хуйня полная
-		producer.Write(fmt.Sprintf("nsi.%v.widget.updatepos", userId), q)
+		consumer.Init(fmt.Sprintf("nsi.%v", userId)) //todo хуйня полная
+		producer.Write(fmt.Sprintf("nsi.%v", userId), q)
 	}
 }
 
