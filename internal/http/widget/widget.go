@@ -10,7 +10,6 @@ import (
 	models "nsi/internal/domain"
 	join_models "nsi/internal/domain/join"
 	producer "nsi/internal/kafka"
-	"nsi/internal/kafka/consumer"
 	"strconv"
 	"time"
 )
@@ -110,8 +109,8 @@ func (d *widgetHelper) UpdateConfig(role models.GrantType) http.HandlerFunc {
 
 		var q = fmt.Sprintf("{\"Type\":\"widget_update_config\", \"id\": %v, \"config\":%v}", id, params.Config)
 
-		consumer.Init(fmt.Sprintf("nsi.%v", userId)) //todo хуйня полная
-		producer.Write(fmt.Sprintf("nsi.%v", userId), q)
+		//todo хуйня полная
+		go producer.Write(fmt.Sprintf("nsi.%v", userId), q)
 	}
 }
 
@@ -161,8 +160,8 @@ func (d *widgetHelper) UpdatePos(role models.GrantType) http.HandlerFunc {
 
 		var q = fmt.Sprintf("{\"Type\":\"widget_update_pos\", \"id\": %v, \"x\": %v, \"y\": %v}", id, params.X, params.Y)
 
-		consumer.Init(fmt.Sprintf("nsi.%v", userId)) //todo хуйня полная
-		producer.Write(fmt.Sprintf("nsi.%v", userId), q)
+		//todo хуйня полная
+		go producer.Write(fmt.Sprintf("nsi.%v", userId), q)
 	}
 }
 
@@ -194,6 +193,13 @@ func (d *widgetHelper) Delete(role models.GrantType) http.HandlerFunc {
 			http.Error(w, "Error", http.StatusBadRequest)
 			return
 		}
+
+		//спрятать в сервис уровень todo Не работает если LDS не слушает, надо что то придумать
+		userId, _ := strconv.Atoi(r.Header.Get("UserId"))
+		var q = fmt.Sprintf("{\"Type\":\"widget_delete\", \"id\": %v, \"widgetId\": %v}", userId, id)
+
+		//todo хуйня полная
+		go producer.Write(fmt.Sprintf("nsi.%v", userId), q)
 	}
 }
 
@@ -289,5 +295,8 @@ func (d *widgetHelper) Create(role models.GrantType) http.HandlerFunc {
 		}
 
 		fmt.Fprint(w, id)
+
+		var q = fmt.Sprintf("{\"Type\":\"widget_create\", \"id\": %v, \"widgetId\": %v}", userId, id)
+		go producer.Write(fmt.Sprintf("nsi.%v", userId), q)
 	}
 }

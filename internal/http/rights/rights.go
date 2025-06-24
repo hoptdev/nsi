@@ -8,6 +8,7 @@ import (
 	"net/http"
 	grpcHandler "nsi/internal/auth"
 	models "nsi/internal/domain"
+	producer "nsi/internal/kafka"
 	"nsi/internal/services/rights"
 	"strconv"
 	"time"
@@ -97,6 +98,10 @@ func (d *rightsHelper) Update(role models.GrantType) http.HandlerFunc {
 		}
 
 		fmt.Fprint(w, id)
+
+		//todo ну это реально хреново
+		var q = fmt.Sprintf("{\"Type\":\"rights_update\", \"id\": %v, \"rightId\": %v, \"grant\":\"%v\"}", params.UserId, id, params.Type)
+		go producer.Write(fmt.Sprintf("nsi.%v", params.UserId), q)
 	}
 }
 
@@ -149,6 +154,10 @@ func (d *rightsHelper) Create(role models.GrantType) http.HandlerFunc {
 		}
 
 		fmt.Fprint(w, id)
+
+		//todo ну это реально хреново
+		var q = fmt.Sprintf("{\"Type\":\"rights_create\", \"id\": %v, \"rightId\": %v}", params.UserId, id)
+		go producer.Write(fmt.Sprintf("nsi.%v", params.UserId), q)
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -14,6 +13,8 @@ const (
 )
 
 func Write(topic string, messageContent string) {
+	Init(topic)
+
 	writer := kafka.NewWriter(kafka.WriterConfig{
 		Brokers: []string{brokerAddress},
 		Topic:   topic,
@@ -34,5 +35,14 @@ func Write(topic string, messageContent string) {
 	}
 
 	fmt.Println("Message sent successfully!")
-	time.Sleep(2 * time.Second) // Даем время на доставку
+}
+
+func Init(topic string) {
+
+	conn, err := kafka.DialLeader(context.Background(), "tcp", brokerAddress, topic, 0)
+	if err != nil {
+		panic(err)
+	}
+
+	defer conn.Close()
 }

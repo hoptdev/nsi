@@ -44,16 +44,3 @@ func Consume(ctx context.Context, topic string) {
 		}
 	}
 }
-
-func Init(topic string) {
-
-	groupID := fmt.Sprintf("consumer-group-%d", os.Getpid())
-
-	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:     []string{brokerAddress},
-		Topic:       topic,
-		GroupID:     groupID,
-		StartOffset: kafka.LastOffset,
-	})
-	defer reader.Close()
-}
