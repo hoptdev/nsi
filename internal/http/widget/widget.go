@@ -296,7 +296,9 @@ func (d *widgetHelper) Create(role models.GrantType) http.HandlerFunc {
 
 		fmt.Fprint(w, id)
 
-		var q = fmt.Sprintf("{\"Type\":\"widget_create\", \"id\": %v, \"widgetId\": %v}", userId, id)
+		params_str, _ := json.Marshal(params)
+
+		var q = fmt.Sprintf("{\"Type\":\"widget_create\", \"Metadata\": \"%v\"", userId, params_str)
 		go producer.Write(fmt.Sprintf("nsi.%v", userId), q)
 	}
 }
