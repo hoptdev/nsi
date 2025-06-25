@@ -267,6 +267,8 @@ func (d *widgetHelper) Create(role models.GrantType) http.HandlerFunc {
 			DashboardId int    `json:"dashboardId"`
 			WidgetType  string `json:"type"`
 			Config      string `json:"config"`
+
+			WidgetId int
 		}{}
 
 		err := json.NewDecoder(r.Body).Decode(&params)
@@ -293,6 +295,8 @@ func (d *widgetHelper) Create(role models.GrantType) http.HandlerFunc {
 			http.Error(w, "Error", http.StatusBadRequest)
 			return
 		}
+
+		params.WidgetId = id
 
 		fmt.Fprint(w, id)
 
